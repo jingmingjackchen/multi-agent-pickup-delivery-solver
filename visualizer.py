@@ -470,10 +470,9 @@ class AGVVisualizer:
             
         except FileNotFoundError as e:
             print(f"Error: Could not find input file - {e}")
-            print("Please ensure the following files are in the current directory:")
-            print("  - map_data.csv")
-            print("  - task_csv.csv")
-            print("  - agv_trajectory.csv")
+            print("  - input/map_data_full.csv")
+            print("  - input/task_csv_full.csv")
+            print("  - output/agv_trajectory.csv")
         except Exception as e:
             print(f"Error: {e}")
             import traceback
@@ -483,14 +482,14 @@ def main():
     """Main function to run the AGV visualizer."""
     # Create visualizer instance
     visualizer = AGVVisualizer(
-        map_file='input_files/map_data_full.csv',
-        task_file='input_files/task_csv_full.csv',
-        trajectory_file='agv_trajectory.csv'
+        map_file='input/map_data_full.csv',
+        task_file='input/task_csv_full.csv',
+        trajectory_file='output/agv_trajectory.csv'
     )
     
     # Run visualization and create MP4
     # You can adjust fps (frames per second) for faster/slower playback
-    visualizer.run(output_file='agv_simulation.mp4', fps=2)
+    visualizer.run(output_file='output/agv_simulation.mp4', fps=2)
 
 if __name__ == "__main__":
     main()

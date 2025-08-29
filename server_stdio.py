@@ -1,24 +1,17 @@
 """
 LNS-wPBS Multi-Agent Pickup and Delivery (MAPD) Solver
-Implements dynamic task reassignment with windowed PBS path planning
 Based on "Multi-Goal Multi-Agent Pickup and Delivery" (Xu et al., 2022)
 and "Lifelong Multi-Agent Path Finding in Large-Scale Warehouses" (Li et al., 2021)
 """
 
 import csv
 import heapq
-import sys
 import os
-from typing import List, Tuple, Dict, Set, Optional, Any, NamedTuple
+from typing import List, Tuple, Dict, Set, Optional, Any
 from dataclasses import dataclass, field
 from collections import defaultdict, deque
 from enum import Enum
-import random
 import time
-import copy
-from itertools import permutations, product
-
-from mcp.server.fastmcp import FastMCP
 
 # Constants
 GRID_SIZE = 20
@@ -176,19 +169,6 @@ class LNSwPBSSolver:
                     self.agvs[name] = AGV(name, x, y, pitch, x, y)
         
         # Calculate waiting cells for each pickup point
-        # for pickup_name, pickup_pos in self.start_points.items():
-        #     pickup_loc = self.get_pickup_location(pickup_name)
-        #     start_x, start_y = self.start_points[pickup_name]
-        #     if pickup_loc:
-        #         waiting_positions = []
-        #         px, py = pickup_loc
-        #         # Add waiting cells at +1Y and -1Y from pickup cell
-        #         for dy in [1, -1]:
-        #             wx, wy = px, py + dy
-        #             if (1 <= wx <= GRID_SIZE and 1 <= wy <= GRID_SIZE and 
-        #                 (wx, wy) not in self.obstacles):
-        #                 waiting_positions.append((wx, wy))
-        #         self.waiting_cells[pickup_name] = waiting_positions
         for pickup_name, pickup_pos in self.start_points.items():
             pickup_loc = self.get_pickup_location(pickup_name)
             if pickup_loc:
@@ -303,7 +283,6 @@ class LNSwPBSSolver:
     def get_best_waiting_cell(self, agent: AGV) -> Optional[Tuple[int, int]]:
         """
         Find the best available waiting cell for an agent based on task availability.
-        MODIFIED: Allow agents to wait near pickup points even if they're reserved.
         """
         best_cell = None
         best_score = INFINITY
@@ -481,7 +460,6 @@ class LNSwPBSSolver:
         Assign free agents to *front* tasks (FIFO) using Hungarian assignment.
         A pickup point is eligible only if it is not currently locked by pickup_point_assignments.
         Each eligible pickup contributes at most its front task to the assignment set.
-        MODIFIED: Always try to assign agents to waiting cells if no tasks available.
         """
         print(f"Timestep {self.current_timestep}: Running dynamic task assignment...")
 
@@ -615,7 +593,6 @@ class LNSwPBSSolver:
         """
         Windowed Priority-Based Search for path planning.
         Only resolves collisions within the time window.
-        MODIFIED: Removed t_offset constraints as they are redundant.
         """
         paths = {}
         
@@ -878,7 +855,6 @@ class LNSwPBSSolver:
         """
         A* search with windowed collision checking.
         Continues planning beyond window but ignores constraints after window.
-        MODIFIED: Uses heuristic properly and has more robust edge constraint checking.
         """
         initial = State(start[0], start[1], start[2], start_time)
         initial.h = self.manhattan_distance((start[0], start[1]), goal)
@@ -995,7 +971,6 @@ class LNSwPBSSolver:
         """
         Find conflicts between paths within the time window.
         Checks both vertex and edge (swapping) conflicts comprehensively.
-        MODIFIED: Removed redundant edge conflict check.
         """
         conflicts = []
         agents = list(paths.keys())
@@ -1062,7 +1037,6 @@ class LNSwPBSSolver:
                                         t1,
                                         'edge'
                                     )
-                            # REMOVED redundant check as it's covered by the swap check above
         
         if earliest_conflict:
             conflicts.append(earliest_conflict)
@@ -1166,7 +1140,6 @@ class LNSwPBSSolver:
     def execute_timestep(self):
         """
         Execute one timestep of the simulation.
-        MODIFIED: Better handling of agents at waiting cells and reassignment.
         """
         self.current_timestep += 1
         
@@ -1277,7 +1250,6 @@ class LNSwPBSSolver:
     def replan(self):
         """
         Replan paths for all agents.
-        MODIFIED: Allows task assignment to agents at waiting cells or returning home.
         """
         # First, start executing tasks from sequences for agents without current tasks
         for agent in self.agvs.values():
@@ -1529,18 +1501,18 @@ class LNSwPBSSolver:
         return (total_collisions == 0 and len(completed_tasks) == len(self.tasks) and 
                 len(duplicate_tasks) == 0 and len(fifo_violations) == 0)
 
-def main(agv_position: str, agv_task: str) -> str:
+def main():
     """Main execution function"""
     # Initialize solver with windowing parameters
-    solver = LNSwPBSSolver(window=30, replan_period=15)
+    solver = LNSwPBSSolver(window=10, replan_period=5)
     
     # Get current directory
     current_dir = os.getcwd()
     
     # Load data files
-    map_file = os.path.join(current_dir, agv_position)
-    task_file = os.path.join(current_dir, agv_task)
-    output_file = os.path.join(current_dir, 'agv_trajectory.csv')
+    map_file = os.path.join(current_dir, 'input/map_data_full.csv')
+    task_file = os.path.join(current_dir, 'input/task_csv_full.csv')
+    output_file = os.path.join(current_dir, 'output/agv_trajectory.csv')
     
     # Check if input files exist
     if not os.path.exists(map_file):
@@ -1593,18 +1565,5 @@ def main(agv_position: str, agv_task: str) -> str:
     else:
         print("No trajectory generated!")
 
-    return os.path.join(os.getcwd(), "agv_trajectory.csv")
-
-
-mcp = FastMCP("PathServer")
-
-@mcp.tool()
-async def mcp_wrapper(agv_position: str, agv_task: str) -> str:
-    return main(agv_position, agv_task)
-
 if __name__ == "__main__":
-    try:
-        mcp.run(transport='stdio')
-    except Exception as e:
-        print(f"Server crashed: {e}", file=sys.stderr)
-        sys.exit(1)
+    main()
