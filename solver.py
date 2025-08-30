@@ -1,5 +1,5 @@
 """
-LNS-wPBS Multi-Agent Pickup and Delivery (MAPD) Solver
+PBS Multi-Agent Pickup and Delivery (MAPD) Solver
 Based on "Multi-Goal Multi-Agent Pickup and Delivery" (Xu et al., 2022)
 and "Lifelong Multi-Agent Path Finding in Large-Scale Warehouses" (Li et al., 2021)
 """
@@ -125,7 +125,7 @@ class PBSNode:
     def __lt__(self, other):
         return self.cost < other.cost
 
-class LNSwPBSSolver:
+class PBSSolver:
     def __init__(self, window: int = DEFAULT_WINDOW, replan_period: int = DEFAULT_REPLAN_PERIOD):
         self.agvs: Dict[str, AGV] = {}
         self.tasks: List[Task] = []
@@ -142,7 +142,7 @@ class LNSwPBSSolver:
         self.waiting_cells: Dict[str, List[Tuple[int, int]]] = {}  # pickup_point -> [waiting_positions]
         self.waiting_cell_reservations: Dict[Tuple[int, int], str] = {}  # waiting_cell -> agent_name
         
-        # LNS-wPBS specific parameters
+        # windowed PBS specific parameters
         self.window = window  # Time window for collision resolution
         self.replan_period = replan_period  # Timesteps between replanning
         self.current_timestep = 0
@@ -455,7 +455,7 @@ class LNSwPBSSolver:
                 matches.append((i, j))
         return matches
 
-    def dynamic_task_assignment_lns(self):
+    def dynamic_task_assignment(self):
         """
         Assign free agents to *front* tasks (FIFO) using Hungarian assignment.
         A pickup point is eligible only if it is not currently locked by pickup_point_assignments.
@@ -1280,7 +1280,7 @@ class LNSwPBSSolver:
         self.clear_stale_waiting_reservations()
         
         # Reassign tasks to free agents (including those at waiting cells or returning home)
-        self.dynamic_task_assignment_lns()
+        self.dynamic_task_assignment()
         
         # Start newly assigned tasks
         for agent in self.agvs.values():
@@ -1322,10 +1322,10 @@ class LNSwPBSSolver:
     
     def generate_trajectory(self):
         """
-        Generate complete trajectory using LNS-wPBS.
+        Generate complete trajectory using PBS.
         """
         print("="*60)
-        print("Running LNS-wPBS algorithm...")
+        print("Running PBS algorithm...")
         print(f"Parameters: window={self.window}, replan_period={self.replan_period}")
         print("="*60)
         
@@ -1501,17 +1501,17 @@ class LNSwPBSSolver:
         return (total_collisions == 0 and len(completed_tasks) == len(self.tasks) and 
                 len(duplicate_tasks) == 0 and len(fifo_violations) == 0)
 
-def main():
+def main(window_size, replan_period):
     """Main execution function"""
     # Initialize solver with windowing parameters
-    solver = LNSwPBSSolver(window=10, replan_period=5)
-    
+    solver = PBSSolver(window=window_size, replan_period=replan_period)
+
     # Get current directory
     current_dir = os.getcwd()
     
     # Load data files
-    map_file = os.path.join(current_dir, 'input/map_data_full.csv')
-    task_file = os.path.join(current_dir, 'input/task_csv_full.csv')
+    map_file = os.path.join(current_dir, 'input/map_data.csv')
+    task_file = os.path.join(current_dir, 'input/task_csv.csv')
     output_file = os.path.join(current_dir, 'output/agv_trajectory.csv')
     
     # Check if input files exist
@@ -1523,7 +1523,7 @@ def main():
         return
     
     print("="*60)
-    print("LNS-wPBS MAPD Solver")
+    print("PBS MAPD Solver")
     print("="*60)
     print(f"Loading data from {map_file} and {task_file}...")
     
@@ -1534,7 +1534,7 @@ def main():
     print(f"End points: {list(solver.end_points.keys())}")
     print(f"AGVs: {list(solver.agvs.keys())}")
     
-    print("\nGenerating trajectory with LNS-wPBS algorithm...")
+    print("\nGenerating trajectory with PBS algorithm...")
     start_time = time.time()
     
     # Generate trajectory
@@ -1566,4 +1566,6 @@ def main():
         print("No trajectory generated!")
 
 if __name__ == "__main__":
-    main()
+    WINDOW_SIZE = 30
+    REPLAN_PERIOD = 15
+    main(WINDOW_SIZE, REPLAN_PERIOD)
