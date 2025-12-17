@@ -6,7 +6,8 @@ A multi-agent pickup and delivery (MAPD) solver implementing windowed priority b
 
 This project provides a multi-agent pathfinding (MAPF) solution for coordinating multiple Autonomous Guided Vehicles (AGVs) in warehouse environments, handling AGV orientation and kinematic costs, task assignments, collision-avoidance, and FIFO order task pick-up constraints.  
 
-This project is completed as a submission to the [2025 Siemens Xcelerator Contest - MioVerse Track](https://www.siemens-x.com.cn/event-detail?eventId=700bf02d-da5c-46c6-ab18-374dc82438e6).
+## News
+🥉 This project received a bronze medal (5th place) in the [2025 Siemens Xcelerator Contest - MioVerse Track](https://www.siemens-x.com.cn/event-detail?eventId=700bf02d-da5c-46c6-ab18-374dc82438e6). You can check the contest leaderboard [here](https://www.biendata.xyz/competition/siemens-x/winners/). <span style="font-size: 0.7em;">(If the leaderboard is not displaying correctly, please switch the site language to Chinese using the toggle near the top of the screen).</span>
 
 ## Features
 
